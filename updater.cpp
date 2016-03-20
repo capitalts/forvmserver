@@ -100,30 +100,26 @@ void updater::readyRead(){
     QFile inComingFile(inRoot.tagName() + ".xml");
     QFile outGoingFile(inRoot.tagName() + ".xml");
             outDoc.setContent(&inComingFile);
-            switch(header){
-
-            case "addArticles":
+            if(header == "addArticles"){
                     addArticles();
                     outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
                     outGoingFile.write(outDoc.toByteArray());
-                break;
-            case "biasChanged":
+            }else if(header == "biasChanged"){
                     biasChange();
                     outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
                     outGoingFile.write(outDoc.toByteArray());
-                break;
-            case "fairChanged":
+            }else if(header == "fairChanged"){
+
                     fairChange();
                     outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
                     outGoingFile.write(outDoc.toByteArray());
-                break;
-            case "post":
+             }else if(header == "post"){
                     post();
                     outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
                     outGoingFile.write(outDoc.toByteArray());
-                break;
+             }
 
-            }
+
 
     Data = outGoingFile.readAll();
     outGoingFile.close();
