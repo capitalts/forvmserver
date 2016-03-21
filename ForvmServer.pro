@@ -23,3 +23,6 @@ HEADERS  += \
     server.h
 
 FORMS    +=
+
+DISTFILES += \
+    thread.xml

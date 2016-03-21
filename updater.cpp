@@ -109,7 +109,6 @@ void updater::readyRead(){
                     outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
                     outGoingFile.write(outDoc.toByteArray());
             }else if(header == "fairChanged"){
-
                     fairChange();
                     outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
                     outGoingFile.write(outDoc.toByteArray());
