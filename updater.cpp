@@ -99,24 +99,21 @@ void updater::readyRead(){
     QString header = inRoot.firstChild().nodeValue();
     QFile inComingFile(inRoot.tagName() + ".xml");
     QFile outGoingFile(inRoot.tagName() + ".xml");
-            outDoc.setContent(&inComingFile);
-            if(header == "addArticles"){
-                    addArticles();
-                    outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
-                    outGoingFile.write(outDoc.toByteArray());
-            }else if(header == "biasChanged"){
-                    biasChange();
-                    outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
-                    outGoingFile.write(outDoc.toByteArray());
-            }else if(header == "fairChanged"){
-                    fairChange();
-                    outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
-                    outGoingFile.write(outDoc.toByteArray());
-             }else if(header == "post"){
-                    post();
-                    outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
-                    outGoingFile.write(outDoc.toByteArray());
-             }
+    outDoc.setContent(&inComingFile);
+    outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
+    if(header == "addArticles"){
+            addArticles();
+            outGoingFile.write(outDoc.toByteArray());
+    }else if(header == "biasChanged"){
+            biasChange();
+            outGoingFile.write(outDoc.toByteArray());
+    }else if(header == "fairChanged"){
+            fairChange();
+            outGoingFile.write(outDoc.toByteArray());
+     }else if(header == "post"){
+            post();
+            outGoingFile.write(outDoc.toByteArray());
+     }
 
 
 
