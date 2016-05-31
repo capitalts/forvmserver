@@ -18,7 +18,9 @@ void server::StartServer()
 
 void server::incomingConnection(qintptr socketDescriptor)
 {
+    qDebug() << "Incoming Connection";
     updater *thread = new updater(socketDescriptor, this);
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
     thread->start();
+
 }

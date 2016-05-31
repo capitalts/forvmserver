@@ -9,12 +9,13 @@
 #include <QDomNode>
 #include <QDomElement>
 #include <articlereader.h>
+
 class updater : public QThread
 {
     Q_OBJECT
 public:
-    explicit updater(int ID, QObject * parent = 0);
-    void run();
+    explicit updater(qintptr ID, QObject * parent = 0);
+    void start();
     void addArticles();
     void biasChange();
     void fairChange();
@@ -24,13 +25,14 @@ signals:
 
 public slots:
     void readyRead();
-    void disconnected();
+    void disconnect();
 private:
     QTcpSocket *socket;
     int socketDescriptor;
     ArticleReader reader;
     QDomDocument inDoc;
     QDomDocument outDoc;
+    QString fileName;
 };
 
 #endif // UPDATER_H
