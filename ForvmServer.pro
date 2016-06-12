@@ -24,5 +24,4 @@ HEADERS  += \
 
 FORMS    +=
 
-DISTFILES += \
-    thread.xml
+DISTFILES +=

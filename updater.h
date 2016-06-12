@@ -25,6 +25,7 @@ signals:
 
 public slots:
     void readyRead();
+    void bytesWritten(qint64 bytes);
     void disconnect();
 private:
     QTcpSocket *socket;

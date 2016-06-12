@@ -13,10 +13,10 @@ void updater::start(){
         emit error(socket->error());
         return;
     }
-    qDebug() << "connected readyRead and disconnected";
     connect(socket, SIGNAL(readyRead()), this, SLOT(readyRead()), Qt::DirectConnection);
     connect(socket, SIGNAL(disconnected()), this, SLOT(disconnect()));
-
+    connect(socket, SIGNAL(bytesWritten(qint64)), this, SLOT(bytesWritten(qint64)));
+    qDebug() << socketDescriptor << "connected";
 
     exec();
 }
@@ -53,12 +53,11 @@ void updater::biasChange()
     QDomElement outArticles = outRoot.firstChildElement("articles");
     QDomElement inArticles = inRoot.firstChildElement("articles");
     QDomNodeList inArtList = inArticles.elementsByTagName("article");
-    QDomNodeList outArtList = outArticles.elementsByTagName("artilce");
+    QDomNodeList outArtList = outArticles.elementsByTagName("article");
     for(int i = 0; i < inArtList.size(); i++){
         QDomElement inBias = inArtList.at(i).firstChildElement("bias");
         QDomElement outBias = outArtList.at(i).firstChildElement("bias");
-        if(inBias.firstChild().toElement().text() !=
-                outBias.firstChild().toElement().text()){
+        if(inBias.text()!=outBias.text()){
             outBias.replaceChild(inBias.firstChild(), outBias.firstChild());
         }
     }
@@ -71,11 +70,11 @@ void updater::fairChange()
     QDomElement outArticles = outThread.firstChildElement("articles");
     QDomElement inArticles = inThread.firstChildElement("articles");
     QDomNodeList inArtList = inArticles.elementsByTagName("article");
-    QDomNodeList outArtList = outArticles.elementsByTagName("artilce");
+    QDomNodeList outArtList = outArticles.elementsByTagName("article");
     for(int i = 0; i < inArtList.size(); i++){
         QDomElement inFair = inArtList.at(i).firstChildElement("fair");
         QDomElement outFair = outArtList.at(i).firstChildElement("fair");
-    if(inFair.firstChild().toElement().text() != outFair.firstChild().toElement().text()){
+    if(inFair.text() != outFair.text()){
             outFair.replaceChild(inFair.firstChild(), outFair.firstChild());
         }
     }
@@ -91,42 +90,50 @@ void updater::post()
 
 }
 
+void updater::bytesWritten(qint64 bytes)
+{
+    qDebug() << bytes << " bytes written...";
+}
+
 void updater::readyRead(){
     qDebug() << "ReadyRead";
     QByteArray Data = socket->readAll();
     inDoc.setContent(Data);
-    qDebug() << inDoc.firstChild().toElement().text();
     QDomElement thread = inDoc.firstChildElement("thread");
     QString header = thread.firstChildElement("header").text();
-    fileName = thread.firstChildElement("fileName").firstChild().toElement().text();
-    QFile inComingFile("/home/tory/QtProjects/ForvmServer/" + fileName);
-    QFile outGoingFile("/home/tory/QtProjects/ForvmServer/" + fileName);
-    outDoc.setContent(&inComingFile);
-    outGoingFile.open(QIODevice::ReadWrite | QIODevice::Truncate);
+    fileName = thread.firstChildElement("fileName").text();
+    qDebug() << "fileName" << fileName;
+    QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
+    file.open(QIODevice::ReadWrite);
+    outDoc.setContent(&file);
+    file.resize(0);
     if(header == "addArticles"){
             addArticles();
-            outGoingFile.write(outDoc.toByteArray());
+            file.write(outDoc.toByteArray());
     }else if(header == "biasChanged"){
             qDebug() << "Bias Changed";
             biasChange();
             qDebug() << "Writing to file";
-            outGoingFile.write(outDoc.toByteArray());
+            file.write(outDoc.toByteArray());
     }else if(header == "fairChanged"){
+            qDebug() << "fairChanged";
             fairChange();
-            outGoingFile.write(outDoc.toByteArray());
+            qDebug() << "Writing to file";
+            file.write(outDoc.toByteArray());
      }else if(header == "post"){
             post();
-            outGoingFile.write(outDoc.toByteArray());
+            file.write(outDoc.toByteArray());
      }
 
-
-
-    Data = outGoingFile.readAll();
-
-    outGoingFile.close();
-
-    qDebug() << "Sending";
-    socket->write(Data);
+    QByteArray newData = outDoc.toByteArray();
+    file.close();
+    if(socket->isOpen()){
+        qDebug() << "Writing...";
+        qDebug() << socket->write(newData);
+        qDebug() << "Done Writing";
+    }else{
+       qDebug() << "Socket not open";
+    }
 }
 
 void updater::disconnect(){
