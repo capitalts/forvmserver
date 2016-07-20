@@ -82,11 +82,26 @@ void updater::fairChange()
 
 void updater::post()
 {
-    QDomElement inRoot = inDoc.firstChildElement("thread");
-    QDomElement outRoot = outDoc.firstChildElement("thread");
-    QDomNodeList inPosts = inRoot.firstChildElement("posts").elementsByTagName("post");
-    QDomElement outPosts = outRoot.firstChildElement("posts");
-    outPosts.appendChild(inPosts.at(inPosts.size()-1));
+    QFile mainThreads("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/MainThreads.xml");
+    mainThreads.open(QIODevice::ReadWrite);
+    QDomDocument doc;
+    doc.setContent(&mainThreads);
+    mainThreads.resize(0);
+    QDomElement ele = doc.firstChildElement("threads");
+    QDomElement postNumEle = ele.firstChildElement("currentPostNumber");
+    int num = postNumEle.text().toInt();
+    num += 1;
+    postNumEle.replaceChild(doc.createTextNode(QString::number(num)),postNumEle.firstChild());
+    mainThreads.write(doc.toByteArray());
+    QDomElement inThread= inDoc.firstChildElement("thread");
+    QDomElement outThread = outDoc.firstChildElement("thread");
+    QDomNodeList inPosts = inThread.firstChildElement("posts").elementsByTagName("post");
+    QDomElement postNumber = inDoc.createElement("postNumber");
+    QDomElement inPost = inPosts.at(inPosts.size()-1).toElement();
+    postNumber.appendChild(inDoc.createTextNode(QString::number(num)));
+    inPost.appendChild(postNumber);
+    QDomElement outPosts = outThread.firstChildElement("posts");
+    outPosts.appendChild(inPost);
 
 }
 
@@ -121,6 +136,7 @@ void updater::readyRead(){
             qDebug() << "Writing to file";
             file.write(outDoc.toByteArray());
      }else if(header == "post"){
+            qDebug() << "post";
             post();
             file.write(outDoc.toByteArray());
      }
