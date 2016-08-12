@@ -27,13 +27,16 @@ public slots:
     void readyRead();
     void bytesWritten(qint64 bytes);
     void disconnect();
+    void parseArticle();
 private:
     QTcpSocket *socket;
     int socketDescriptor;
-    ArticleReader reader;
     QDomDocument inDoc;
     QDomDocument outDoc;
     QString fileName;
+    QNetworkAccessManager *qnam;
+    QDomDocument articleHtml;
+    QNetworkReply* reply;
 };
 
 #endif // UPDATER_H

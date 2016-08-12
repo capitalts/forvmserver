@@ -13,6 +13,8 @@ void updater::start(){
         emit error(socket->error());
         return;
     }
+    qnam = new QNetworkAccessManager(this);
+    connect(qnam, SIGNAL(finished(QNetworkReply*)),this, SLOT(parseArticle()));
     connect(socket, SIGNAL(readyRead()), this, SLOT(readyRead()), Qt::DirectConnection);
     connect(socket, SIGNAL(disconnected()), this, SLOT(disconnect()));
     connect(socket, SIGNAL(bytesWritten(qint64)), this, SLOT(bytesWritten(qint64)));
@@ -28,22 +30,15 @@ void updater::addArticles(){
     QDomElement outArticles = outRoot.firstChildElement("articles");
     QDomElement inArticles = inRoot.firstChildElement("articles");
     QDomNodeList inArtList = inArticles.elementsByTagName("article");
-    QDomNodeList outArtList = outArticles.elementsByTagName("artilce");
+    QDomNodeList outArtList = outArticles.elementsByTagName("article");
+    qDebug() << inArtList.at(outArtList.size()).firstChildElement("source").text();
     if(inArtList.size() != outArtList.size()){
-    for(int i = 0; i < inArtList.size(); i++){
-        if(inArtList.at(i).childNodes().size() != 5){
-            QString art = inArtList.at(i).firstChildElement("source").firstChild().toElement().text();
-            reader.startRequest(art);
-            QDomElement imgSource = inDoc.createElement("imgSource");
-            QDomElement title = inDoc.createElement("title");
-            imgSource.appendChild(inDoc.createTextNode(reader.getImageSource()));
-            title.appendChild(inDoc.createTextNode(reader.getArticleTitle()));
-            inArtList.at(i).appendChild(imgSource);
-            inArtList.at(i).appendChild(title);
-            outArticles.appendChild(inArtList.at(i));
-            }
+        if(inArtList.at(outArtList.size()).childNodes().size() != 5){
+            QUrl art(inArtList.at(outArtList.size()).firstChildElement("source").text());
+            reply = qnam->get(QNetworkRequest(art));
         }
     }
+
 }
 
 void updater::biasChange()
@@ -121,41 +116,99 @@ void updater::readyRead(){
     QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
     file.open(QIODevice::ReadWrite);
     outDoc.setContent(&file);
-    file.resize(0);
-    if(header == "addArticles"){
-            addArticles();
-            file.write(outDoc.toByteArray());
-    }else if(header == "biasChanged"){
-            qDebug() << "Bias Changed";
-            biasChange();
-            qDebug() << "Writing to file";
-            file.write(outDoc.toByteArray());
-    }else if(header == "fairChanged"){
-            qDebug() << "fairChanged";
-            fairChange();
-            qDebug() << "Writing to file";
-            file.write(outDoc.toByteArray());
-     }else if(header == "post"){
-            qDebug() << "post";
-            post();
-            file.write(outDoc.toByteArray());
-     }
+    if(header == "article"){
+                qDebug() << "article";
+                addArticles();
 
-    QByteArray newData = outDoc.toByteArray();
-    file.close();
-    if(socket->isOpen()){
-        qDebug() << "Writing...";
-        qDebug() << socket->write(newData);
-        qDebug() << "Done Writing";
-    }else{
-       qDebug() << "Socket not open";
     }
+    else{
+        if(header == "biasChanged"){
+                file.resize(0);
+                qDebug() << "Bias Changed";
+                biasChange();
+                qDebug() << "Writing to file";
+                file.write(outDoc.toByteArray());
+        }else if(header == "fairChanged"){
+                file.resize(0);
+                qDebug() << "fairChanged";
+                fairChange();
+                qDebug() << "Writing to file";
+                file.write(outDoc.toByteArray());
+         }else if(header == "post"){
+                file.resize(0);
+                qDebug() << "post";
+                post();
+                file.write(outDoc.toByteArray());
+        }
+        QByteArray newData = outDoc.toByteArray();
+        if(socket->isOpen()){
+            qDebug() << "Writing...";
+            qDebug() << socket->write(newData);
+            qDebug() << "Done Writing";
+        }else{
+           qDebug() << "Socket not open";
+        }
+     }
+    file.close();
 }
 
 void updater::disconnect(){
     qDebug()<< socketDescriptor << "disconnected" ;
-
+    qnam->deleteLater();
     socket->deleteLater();
     exit(0);
+}
+
+void updater::parseArticle()
+{
+    qDebug() << "parse article";
+    if(reply->error()){
+            qDebug() << "ERROR!";
+            qDebug() << reply->errorString();
+        }
+    else{
+        qDebug() << "read all";
+        QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
+        file.open(QIODevice::ReadWrite);
+        articleHtml.setContent(reply->readAll());
+        qDebug() << "artHtml" << articleHtml.toString();
+        QDomElement inRoot = inDoc.firstChildElement("thread");
+        QDomElement outRoot = outDoc.firstChildElement("thread");
+        QDomElement outArticles = outRoot.firstChildElement("articles");
+        QDomElement inArticles = inRoot.firstChildElement("articles");
+        QDomNodeList inArtList = inArticles.elementsByTagName("article");
+        QDomNodeList outArtList = outArticles.elementsByTagName("article");
+        QString articleTitle = articleHtml.firstChild().firstChildElement("head").elementsByTagName("title").at(0).toElement().text();
+        QDomNodeList metaList = articleHtml.firstChild().firstChildElement("head").elementsByTagName("meta");
+        QDomAttr content;
+        qDebug() << "artTitle" << articleTitle;
+        for(int i = 0; i < metaList.length(); i++){
+            QDomAttr property = metaList.at(i).toElement().attributeNode("property");
+            if(property.value() == "og:image"){
+               content = metaList.at(i).toElement().attributeNode("content");
+               break;
+            }
+        }
+        QString imageSource = content.value();
+        qDebug() << "imgSource" << imageSource;
+
+        QDomElement imgSource = inDoc.createElement("imgSource");
+        QDomElement title = inDoc.createElement("title");
+        imgSource.appendChild(inDoc.createTextNode(imageSource));
+        title.appendChild(inDoc.createTextNode(articleTitle));
+        inArtList.at(outArtList.size()).appendChild(imgSource);
+        inArtList.at(outArtList.size()).appendChild(title);
+        outArticles.appendChild(inArtList.at(outArtList.size()));
+        file.write(outDoc.toByteArray());
+        QByteArray newData = outDoc.toByteArray();
+        if(socket->isOpen()){
+            qDebug() << "Writing...";
+            qDebug() << socket->write(newData);
+            qDebug() << "Done Writing";
+        }else{
+           qDebug() << "Socket not open";
+        }
+    }
+    reply->deleteLater();
 }
 

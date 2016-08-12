@@ -2,51 +2,23 @@
 #include <QEventLoop>
 ArticleReader::ArticleReader(QObject *parent) : QObject(parent)
 {
-    qnam = new QNetworkAccessManager(this);
-
-   connect(qnam, SIGNAL(finished(QNetworkReply*)), this, SLOT(open()));
-
 }
 
 
 
 void ArticleReader::startRequest(QUrl url)
 {
+
+    qnam = new QNetworkAccessManager(this);
+    connect(qnam, SIGNAL(finished(QNetworkReply*)),
+                this, SLOT(open()));
+    qDebug() << "request Started";
     reply = qnam->get(QNetworkRequest(url));
-    articleSource = url;
+    qDebug() << url.toString();
+    articleSource = url.toString();
 
 }
 
-void ArticleReader::setArticleTitle()
-{
-    int titleStart = articleHtml.indexOf("<title>");
-    int titleEnd = articleHtml.indexOf("</title>");
-
-    for(int i = titleStart+7; i < titleEnd; i++){
-        articleTitle.append(articleHtml[i]);
-    }
-    articleTitle.remove(QString("&#39;"));
-    qDebug() << articleTitle.simplified();
-    setImageSource();
-}
-
-void ArticleReader::setImageSource()
-{
-
-    int imageStart = articleHtml.indexOf("og:image");
-    QString rightStart = articleHtml.remove(0, imageStart);
-    int imageEnd = rightStart.indexOf(".jpg");
-    QString imgSource;
-
-    for(int i = 0; i <imageEnd+4; i++){
-        imgSource.append(articleHtml[i]);
-    }
-
-    imgSource = imgSource.remove(imgSource.indexOf("og:image"), imgSource.indexOf("http"));
-
-    imageSource = imgSource;
-
-}
 
 QUrl ArticleReader::getArticleSource()
 {
@@ -55,21 +27,41 @@ QUrl ArticleReader::getArticleSource()
 
 QString ArticleReader::getImageSource()
 {
+
     return imageSource;
 }
 
 QString ArticleReader::getArticleTitle()
 {
     return articleTitle;
+
+
 }
 
 void ArticleReader::open()
 {
         // display contents
-    articleHtml = reply->readAll();
+    if(reply->error()){
+            qDebug() << "ERROR!";
+            qDebug() << reply->errorString();
+        }
+    else{
 
+        articleHtml.setContent(reply->readAll());
+        articleTitle = articleHtml.firstChild().firstChildElement("head").elementsByTagName("title").at(0).toElement().text();
+        QDomNodeList metaList = articleHtml.firstChild().firstChildElement("head").elementsByTagName("meta");
+        QDomAttr content;
+        for(int i = 0; i < metaList.length(); i++){
+            QDomAttr property = metaList.at(i).toElement().attributeNode("property");
+            if(property.value() == "og:image"){
+               content = metaList.at(i).toElement().attributeNode("content");
+               break;
+            }
+        }
+        imageSource = content.value();
+    }
     reply->deleteLater();
     qnam->deleteLater();
-    setArticleTitle();
+
 }
 

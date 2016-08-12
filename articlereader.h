@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QDialog>
+#include <QDomDocument>
 
 class ArticleReader : public QObject
 {
@@ -16,8 +17,6 @@ class ArticleReader : public QObject
 public:
     explicit ArticleReader(QObject *parent = 0);
     void startRequest(QUrl);
-    void setArticleTitle();
-    void setImageSource();
     QUrl getArticleSource();
     QString getImageSource();
     QString getArticleTitle();
@@ -25,11 +24,11 @@ public slots:
     void open();
 private:
     QNetworkAccessManager *qnam;
-    QNetworkReply *reply;
     QUrl articleSource;
     QString articleTitle;
     QString imageSource;
-    QString articleHtml;
+    QDomDocument articleHtml;
+    QNetworkReply* reply;
 };
 
 #endif // ARTICLEREADER_H
