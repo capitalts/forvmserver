@@ -33,7 +33,7 @@ void updater::addArticles(){
     QDomNodeList outArtList = outArticles.elementsByTagName("article");
     qDebug() << inArtList.at(outArtList.size()).firstChildElement("source").text();
     if(inArtList.size() != outArtList.size()){
-        if(inArtList.at(outArtList.size()).childNodes().size() != 5){
+        if(inArtList.at(outArtList.size()).childNodes().size() != 6){
             QUrl art(inArtList.at(outArtList.size()).firstChildElement("source").text());
             reply = qnam->get(QNetworkRequest(art));
         }
@@ -94,11 +94,33 @@ void updater::post()
     QDomElement postNumber = inDoc.createElement("postNumber");
     QDomElement inPost = inPosts.at(inPosts.size()-1).toElement();
     postNumber.appendChild(inDoc.createTextNode(QString::number(num)));
+    qDebug() << "inPost" << inPost.isNull();
     inPost.appendChild(postNumber);
+    qDebug() << "outPosts" << outThread.firstChildElement("posts").isNull();
     QDomElement outPosts = outThread.firstChildElement("posts");
     outPosts.appendChild(inPost);
+    mainThreads.close();
 
 }
+
+void updater::newThread()
+{
+      QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
+      file.open(QIODevice::ReadWrite);
+      QDomElement thread = outDoc.firstChildElement("thread");
+      QDomElement header = thread.firstChildElement("header");
+      thread.removeChild(header);
+      QDomElement article = thread.firstChildElement("articles").firstChildElement("article");
+      QDomElement outPost = thread.firstChildElement("posts").firstChildElement("post");
+      thread.firstChildElement("posts").removeChild(outPost);
+      thread.firstChildElement("articles").removeChild(article);
+      post();
+      file.write(outDoc.toByteArray());
+      file.close();
+//      qDebug() << outDoc.toString();
+      addArticles();
+}
+
 
 void updater::bytesWritten(qint64 bytes)
 {
@@ -109,7 +131,10 @@ void updater::readyRead(){
     qDebug() << "ReadyRead";
     QByteArray Data = socket->readAll();
     inDoc.setContent(Data);
-    QDomElement thread = inDoc.firstChildElement("thread");
+    QDomElement thread = inDoc.firstChildElement("threads");
+    if(thread.isNull()){
+        thread = inDoc.firstChildElement("thread");
+    }
     QString header = thread.firstChildElement("header").text();
     fileName = thread.firstChildElement("fileName").text();
     qDebug() << "fileName" << fileName;
@@ -119,6 +144,10 @@ void updater::readyRead(){
     if(header == "article"){
                 qDebug() << "article";
                 addArticles();
+
+    }else if(header == "New Thread"){
+        outDoc.setContent(Data);
+        newThread();
 
     }
     else{
@@ -140,6 +169,7 @@ void updater::readyRead(){
                 post();
                 file.write(outDoc.toByteArray());
         }
+        qDebug() << "header";
         QByteArray newData = outDoc.toByteArray();
         if(socket->isOpen()){
             qDebug() << "Writing...";
@@ -171,7 +201,7 @@ void updater::parseArticle()
         QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
         file.open(QIODevice::ReadWrite);
         articleHtml.setContent(reply->readAll());
-        qDebug() << "artHtml" << articleHtml.toString();
+        file.resize(0);
         QDomElement inRoot = inDoc.firstChildElement("thread");
         QDomElement outRoot = outDoc.firstChildElement("thread");
         QDomElement outArticles = outRoot.firstChildElement("articles");
@@ -192,14 +222,41 @@ void updater::parseArticle()
         QString imageSource = content.value();
         qDebug() << "imgSource" << imageSource;
 
-        QDomElement imgSource = inDoc.createElement("imgSource");
-        QDomElement title = inDoc.createElement("title");
+        QDomElement imgSource = outDoc.createElement("imgSource");
+        QDomElement title = outDoc.createElement("title");
+        QDomElement outArt = outDoc.createElement("article");
         imgSource.appendChild(inDoc.createTextNode(imageSource));
         title.appendChild(inDoc.createTextNode(articleTitle));
-        inArtList.at(outArtList.size()).appendChild(imgSource);
-        inArtList.at(outArtList.size()).appendChild(title);
-        outArticles.appendChild(inArtList.at(outArtList.size()));
+        outArt.appendChild(inArtList.at(outArtList.size()).firstChildElement("source"));
+        outArt.appendChild(inArtList.at(outArtList.size()).firstChildElement("fair"));
+        outArt.appendChild(inArtList.at(outArtList.size()).firstChildElement("bias"));
+        outArt.appendChild(title);
+        outArt.appendChild(imgSource);
+        outArticles.appendChild(outArt);
         file.write(outDoc.toByteArray());
+        qDebug() << "header" << inRoot.firstChildElement("header").text();
+        if(inRoot.firstChildElement("header").text() == "New Thread"){
+            QFile mainThreads("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/MainThreads.xml");
+
+            mainThreads.open(QIODevice::ReadWrite);
+            QDomDocument mainDoc;
+            mainDoc.setContent(&mainThreads);
+            mainThreads.resize(0);
+            QDomElement threads = mainDoc.firstChildElement("threads");
+            QDomElement newThread = mainDoc.createElement("thread");
+            QDomElement source = mainDoc.createElement("source");
+            QDomElement threadTitle = mainDoc.createElement("title");
+            QDomElement imageSrc = mainDoc.createElement("imageSrc");
+            threadTitle.appendChild(mainDoc.createTextNode(inRoot.firstChildElement("head").text()));
+            imageSrc.appendChild(mainDoc.createTextNode(imgSource.text()));
+            source.appendChild(mainDoc.createTextNode(fileName));
+            newThread.appendChild(threadTitle);
+            newThread.appendChild(imageSrc);
+            newThread.appendChild(source);
+            threads.insertBefore(newThread, threads.firstChildElement("thread"));
+            mainThreads.write(mainDoc.toByteArray());
+
+        }
         QByteArray newData = outDoc.toByteArray();
         if(socket->isOpen()){
             qDebug() << "Writing...";

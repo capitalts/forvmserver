@@ -16,10 +16,6 @@ class updater : public QThread
 public:
     explicit updater(qintptr ID, QObject * parent = 0);
     void start();
-    void addArticles();
-    void biasChange();
-    void fairChange();
-    void post();
 signals:
     void error(QTcpSocket::SocketError socketerror);
 
@@ -29,6 +25,11 @@ public slots:
     void disconnect();
     void parseArticle();
 private:
+    void addArticles();
+    void biasChange();
+    void fairChange();
+    void post();
+    void newThread();
     QTcpSocket *socket;
     int socketDescriptor;
     QDomDocument inDoc;

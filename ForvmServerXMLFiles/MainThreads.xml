@@ -1,9 +1,10 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <threads>
+ <fileName>MainThreads.xml</fileName>
  <thread>
-  <title>Trump's Health</title>
-  <imageSrc>http://i2.cdn.turner.com/cnnnext/dam/assets/160103005109-malheur-national-wildlife-refuge-large-169.jpg</imageSrc>
-  <source>thread.xml</source>
+  <title>fnewfhiewhfiuewhfewfw</title>
+  <imageSrc>http://ichef-1.bbci.co.uk/news/1024/cpsprodpb/146F6/production/_90820738_43ec52fe-5ec7-42fc-9e5e-d5095907f479.jpg</imageSrc>
+  <source>fnewfhiewhfiuewhfewfwThu Aug 18 11:28:48 2016 GMT-0400.xml</source>
  </thread>
  <thread>
   <title>Trump's Health</title>
@@ -20,5 +21,5 @@
   <imageSrc>http://i2.cdn.turner.com/cnnnext/dam/assets/160103005109-malheur-national-wildlife-refuge-large-169.jpg</imageSrc>
   <source>thread.xml</source>
  </thread>
- <currentPostNumber>123530</currentPostNumber>
+ <currentPostNumber>123560</currentPostNumber>
 </threads>
