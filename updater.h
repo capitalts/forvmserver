@@ -8,7 +8,7 @@
 #include <QDomDocument>
 #include <QDomNode>
 #include <QDomElement>
-#include <articlereader.h>
+#include <QtNetwork>
 
 class updater : public QThread
 {

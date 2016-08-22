@@ -169,7 +169,7 @@ void updater::readyRead(){
                 post();
                 file.write(outDoc.toByteArray());
         }
-        qDebug() << "header";
+        qDebug() << "update";
         QByteArray newData = outDoc.toByteArray();
         if(socket->isOpen()){
             qDebug() << "Writing...";
@@ -192,13 +192,14 @@ void updater::disconnect(){
 void updater::parseArticle()
 {
     qDebug() << "parse article";
+
     if(reply->error()){
             qDebug() << "ERROR!";
             qDebug() << reply->errorString();
         }
     else{
         qDebug() << "read all";
-        QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
+        QFile file(fileName);
         file.open(QIODevice::ReadWrite);
         articleHtml.setContent(reply->readAll());
         file.resize(0);
