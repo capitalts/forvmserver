@@ -77,7 +77,7 @@ void updater::fairChange()
 
 void updater::post()
 {
-    QFile mainThreads("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/MainThreads.xml");
+    QFile mainThreads("/home/tory/QtProjects/ForvmServerXMLFiles/MainThreads.xml");
     mainThreads.open(QIODevice::ReadWrite);
     QDomDocument doc;
     doc.setContent(&mainThreads);
@@ -105,7 +105,7 @@ void updater::post()
 
 void updater::newThread()
 {
-      QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
+      QFile file("/home/tory/QtProjects/ForvmServerXMLFiles/" + fileName);
       file.open(QIODevice::ReadWrite);
       QDomElement thread = outDoc.firstChildElement("thread");
       QDomElement header = thread.firstChildElement("header");
@@ -138,7 +138,7 @@ void updater::readyRead(){
     QString header = thread.firstChildElement("header").text();
     fileName = thread.firstChildElement("fileName").text();
     qDebug() << "fileName" << fileName;
-    QFile file("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/" + fileName);
+    QFile file("/home/tory/QtProjects/ForvmServerXMLFiles/" + fileName);
     file.open(QIODevice::ReadWrite);
     outDoc.setContent(&file);
     if(header == "article"){
@@ -199,9 +199,9 @@ void updater::parseArticle()
         }
     else{
         qDebug() << "read all";
-        QFile file(fileName);
+        QFile file("/home/tory/QtProjects/ForvmServerXMLFiles/" + fileName);
         file.open(QIODevice::ReadWrite);
-        articleHtml.setContent(reply->readAll());
+
         file.resize(0);
         QDomElement inRoot = inDoc.firstChildElement("thread");
         QDomElement outRoot = outDoc.firstChildElement("thread");
@@ -209,35 +209,23 @@ void updater::parseArticle()
         QDomElement inArticles = inRoot.firstChildElement("articles");
         QDomNodeList inArtList = inArticles.elementsByTagName("article");
         QDomNodeList outArtList = outArticles.elementsByTagName("article");
-        QString articleTitle = articleHtml.firstChild().firstChildElement("head").elementsByTagName("title").at(0).toElement().text();
-        QDomNodeList metaList = articleHtml.firstChild().firstChildElement("head").elementsByTagName("meta");
-        QDomAttr content;
-        qDebug() << "artTitle" << articleTitle;
-        for(int i = 0; i < metaList.length(); i++){
-            QDomAttr property = metaList.at(i).toElement().attributeNode("property");
-            if(property.value() == "og:image"){
-               content = metaList.at(i).toElement().attributeNode("content");
-               break;
-            }
-        }
-        QString imageSource = content.value();
+        findTitleAndImgSrc(reply->readAll().data(), inArtList.at(outArtList.size()).firstChildElement("source").text());
         qDebug() << "imgSource" << imageSource;
-
+        qDebug() << "arttitle:" << artTitle;
         QDomElement imgSource = outDoc.createElement("imgSource");
         QDomElement title = outDoc.createElement("title");
         QDomElement outArt = outDoc.createElement("article");
         imgSource.appendChild(inDoc.createTextNode(imageSource));
-        title.appendChild(inDoc.createTextNode(articleTitle));
+        title.appendChild(inDoc.createTextNode(artTitle));
         outArt.appendChild(inArtList.at(outArtList.size()).firstChildElement("source"));
         outArt.appendChild(inArtList.at(outArtList.size()).firstChildElement("fair"));
         outArt.appendChild(inArtList.at(outArtList.size()).firstChildElement("bias"));
         outArt.appendChild(title);
         outArt.appendChild(imgSource);
         outArticles.appendChild(outArt);
-        file.write(outDoc.toByteArray());
         qDebug() << "header" << inRoot.firstChildElement("header").text();
         if(inRoot.firstChildElement("header").text() == "New Thread"){
-            QFile mainThreads("/home/tory/QtProjects/ForvmServer/ForvmServerXMLFiles/MainThreads.xml");
+            QFile mainThreads("/home/tory/QtProjects/ForvmServerXMLFiles/MainThreads.xml");
 
             mainThreads.open(QIODevice::ReadWrite);
             QDomDocument mainDoc;
@@ -248,7 +236,11 @@ void updater::parseArticle()
             QDomElement source = mainDoc.createElement("source");
             QDomElement threadTitle = mainDoc.createElement("title");
             QDomElement imageSrc = mainDoc.createElement("imageSrc");
-            threadTitle.appendChild(mainDoc.createTextNode(inRoot.firstChildElement("head").text()));
+            if(inRoot.firstChildElement("head").text().isEmpty()){
+                threadTitle.appendChild(mainDoc.createTextNode(artTitle));
+            }else{
+                threadTitle.appendChild(mainDoc.createTextNode(inRoot.firstChildElement("head").text()));
+            }
             imageSrc.appendChild(mainDoc.createTextNode(imgSource.text()));
             source.appendChild(mainDoc.createTextNode(fileName));
             newThread.appendChild(threadTitle);
@@ -258,6 +250,7 @@ void updater::parseArticle()
             mainThreads.write(mainDoc.toByteArray());
 
         }
+        file.write(outDoc.toByteArray());
         QByteArray newData = outDoc.toByteArray();
         if(socket->isOpen()){
             qDebug() << "Writing...";
@@ -267,6 +260,20 @@ void updater::parseArticle()
            qDebug() << "Socket not open";
         }
     }
+    artTitle.clear();
+    imageSource.clear();
     reply->deleteLater();
 }
+
+void updater::findTitleAndImgSrc(QString html, QString artSource)
+{
+    html = html.simplified();
+    artTitle = html.mid(html.indexOf("<title>") + 7, html.indexOf("</title>")-html.indexOf("<title>")-7);
+    QString articleImageHtml = html.mid(html.indexOf("og:image"));
+    imageSource = articleImageHtml.mid(articleImageHtml.indexOf("http://"), articleImageHtml.indexOf("jpg") + 3
+                                         -articleImageHtml.indexOf("http://"));
+
+
+}
+
 

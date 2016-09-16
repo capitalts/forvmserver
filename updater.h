@@ -36,8 +36,11 @@ private:
     QDomDocument outDoc;
     QString fileName;
     QNetworkAccessManager *qnam;
-    QDomDocument articleHtml;
     QNetworkReply* reply;
+    QString imageSource;
+    QString artTitle;
+
+    void findTitleAndImgSrc(QString html, QString artSource);
 };
 
 #endif // UPDATER_H
